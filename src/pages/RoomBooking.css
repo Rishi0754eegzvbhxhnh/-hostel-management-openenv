@@ -1,0 +1,43 @@
+/* Beautiful glowing animations and scrollbar overrides for the Room Booking Map */
+body {
+    scrollbar-width: thin;
+    scrollbar-color: #4f46e5 transparent;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4f46e5;
+    border-radius: 10px;
+}
+
+.room-booking-container {
+    background: radial-gradient(circle at 50% 0%, #eef2ff 0%, #fbf8ff 100%);
+}
+
+.table-wrapper {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.table-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+/* Stunning pulse for AI search */
+.ai-pulse {
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+    75%, 100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}

@@ -1,0 +1,30 @@
+const mongoose = require('mongoose');
+
+const complaintSchema = new mongoose.Schema({
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  studentName: { type: String, required: true },
+  studentEmail: { type: String, required: true },
+  roomNumber: { type: String, required: true },
+  category: {
+    type: String,
+    enum: ['maintenance', 'food', 'cleanliness', 'security', 'noise', 'other'],
+    required: true,
+  },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  images: [{ type: String }], // URLs (base64 or cloud)
+  status: {
+    type: String,
+    enum: ['pending', 'in_review', 'resolved', 'rejected'],
+    default: 'pending',
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium',
+  },
+  adminResponse: { type: String, default: '' },
+  resolvedAt: { type: Date },
+}, { timestamps: true });
+
+module.exports = mongoose.model('Complaint', complaintSchema);
