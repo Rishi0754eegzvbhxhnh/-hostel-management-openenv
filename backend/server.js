@@ -16,7 +16,8 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increased limit for image uploads
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({
   secret: process.env.JWT_SECRET || 'secretkey123',
   resave: false,
@@ -39,7 +40,7 @@ const iotRoutes = require('./routes/iot');
 const financeRoutes = require('./routes/finance');
 const imageAnalysisRoutes = require('./routes/imageAnalysis');
 const hostelDiscoveryRoutes = require('./routes/hostelDiscovery');
-const sampleDataRoutes = require('./routes/sampleData');
+
 const notificationRoutes = require('./routes/notifications');
 
 
@@ -61,7 +62,7 @@ app.use('/api/iot', iotRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/image-analysis', imageAnalysisRoutes);
 app.use('/api/discovery', hostelDiscoveryRoutes);
-app.use('/api/sample', sampleDataRoutes);
+
 app.use('/api/notifications', notificationRoutes);
 
 

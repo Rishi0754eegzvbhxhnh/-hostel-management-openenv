@@ -4,7 +4,7 @@ import axios from 'axios';
 import FinanceChatbot from '../components/FinanceChatbot';
 import AdminIoTPanel from '../components/AdminIoTPanel';
 
-const BACKEND = 'http://127.0.0.1:5000';
+const BACKEND = 'http://localhost:5000';
 const CATEGORY_COLORS = {
   maintenance: 'bg-blue-100 text-blue-700',
   food: 'bg-orange-100 text-orange-700',
@@ -69,6 +69,7 @@ const AdminDashboard = () => {
   const [adminResponse, setAdminResponse] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rooms, setRooms] = useState([]);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -89,18 +90,32 @@ const AdminDashboard = () => {
 
     setLoading(true);
     try {
-      const [statsRes, complaintsRes, studentsRes, maintenanceRes] = await Promise.all([
+      const [statsRes, complaintsRes, studentsRes, roomsRes, maintenanceRes] = await Promise.all([
         axios.get(`${BACKEND}/api/admin/stats`, { headers }),
         axios.get(`${BACKEND}/api/complaints`, { headers }),
         axios.get(`${BACKEND}/api/admin/students`, { headers }),
+        axios.get(`${BACKEND}/api/rooms`, { headers }),
         axios.get(`${BACKEND}/api/admin/maintenance`, { headers }),
       ]);
       setStats(statsRes.data);
       setComplaints(complaintsRes.data);
       setStudents(studentsRes.data);
+      setRooms(roomsRes.data);
       setMaintenance(maintenanceRes.data);
     } catch (err) {
       console.error('Admin fetch error:', err);
+    } finally { setLoading(false); }
+  };
+
+  const seedDatabase = async () => {
+    if (!window.confirm('This will reset all rooms and add sample students. Proceed?')) return;
+    setLoading(true);
+    try {
+      await axios.post(`${BACKEND}/api/rooms/seed`, {}, { headers });
+      await fetchAll();
+      setToast({ type: 'success', msg: 'System Initialized!', detail: 'Live room inventory and sample data seeded successfully.' });
+    } catch (err) {
+      setToast({ type: 'error', msg: 'Seed Failed', detail: err.message });
     } finally { setLoading(false); }
   };
 
@@ -438,10 +453,18 @@ const AdminDashboard = () => {
                       )}
 
                       <div className="p-5">
-                        <div className="flex flexwrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-3">
                           <Badge label={c.category} colorClass={CATEGORY_COLORS[c.category]} />
                           <Badge label={c.priority} colorClass={PRIORITY_COLORS[c.priority]} />
                           <Badge label={c.status} colorClass={STATUS_COLORS[c.status]} />
+                          {c.aiStatus && (
+                            <span className={`inline-flex items-center px-2.2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                              c.aiStatus === 'authentic' ? 'bg-emerald-100 text-emerald-700' : 
+                              c.aiStatus === 'ai_detected' ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {c.aiStatus === 'authentic' ? '✓ Authentic' : c.aiStatus === 'ai_detected' ? '⚠ AI GENERATED' : 'Processing AI...'}
+                            </span>
+                          )}
                         </div>
                         <h4 className="font-headline font-bold text-on-surface mb-1">{c.title}</h4>
                         <p className="text-xs text-on-surface-variant mb-2">{c.studentName} · Room {c.roomNumber}</p>
@@ -481,6 +504,18 @@ const AdminDashboard = () => {
                           <Badge label={selectedComplaint.category} colorClass={CATEGORY_COLORS[selectedComplaint.category]} />
                           <Badge label={selectedComplaint.priority} colorClass={PRIORITY_COLORS[selectedComplaint.priority]} />
                           <Badge label={selectedComplaint.status} colorClass={STATUS_COLORS[selectedComplaint.status]} />
+                          {selectedComplaint.aiStatus && (
+                            <div className={`px-3 py-1 rounded-lg flex items-center gap-2 ${
+                              selectedComplaint.aiStatus === 'authentic' ? 'bg-emerald-50 text-emerald-700' : 
+                              selectedComplaint.aiStatus === 'ai_detected' ? 'bg-rose-50 text-rose-700' : 'bg-gray-50 text-gray-700'
+                            }`}>
+                              <span className="material-symbols-outlined text-sm">{selectedComplaint.aiStatus === 'authentic' ? 'verified' : 'warning'}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider">
+                                {selectedComplaint.aiStatus === 'authentic' ? 'Authentic Photo' : 'AI Generation Detected'}
+                                {selectedComplaint.aiConfidence > 0 && ` (${selectedComplaint.aiConfidence}%)`}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <p className="text-on-surface mb-6 leading-relaxed">{selectedComplaint.description}</p>
 
@@ -627,7 +662,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 text-on-surface-variant">{s.email}</td>
                             <td className="px-6 py-4 text-on-surface-variant font-mono text-xs">{s.collegeId}</td>
-                            <td className="px-6 py-4 text-on-surface-variant">{s.room || '—'}</td>
+                            <td className="px-6 py-4 text-on-surface-variant">{s.room?.roomNumber || '—'}</td>
                             <td className="px-6 py-4 text-on-surface-variant">{new Date(s.createdAt).toLocaleDateString()}</td>
                           </tr>
                         ))}
@@ -645,24 +680,31 @@ const AdminDashboard = () => {
             {activeTab === 'rooms' && (
               <div>
                 <h2 className="font-headline text-3xl font-extrabold text-primary mb-2">Room Inventory</h2>
-                <p className="text-on-surface-variant mb-8">Manage room status and upload 360° panoramic previews.</p>
+                <p className="text-on-surface-variant mb-8">Manage room status and occupancy levels across all blocks.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(maintenance.length > 0 ? maintenance : [{roomNumber: '302', type: 'single', isAvailable: true, view360: null}]).map((r, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/10">
+                  {rooms.map((r) => (
+                    <div key={r._id} className="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/10">
                        <div className="flex justify-between items-start mb-4">
                           <div>
-                            <h4 className="font-bold text-lg">Room {r.roomNumber || '302'}</h4>
-                            <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">{r.type || 'Single'}</p>
+                            <h4 className="font-bold text-lg">Room {r.roomNumber}</h4>
+                            <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">{r.type}</p>
                           </div>
                           <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${r.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {r.isAvailable ? 'AVAILABLE' : 'BOOKED'}
                           </span>
                        </div>
 
+                       <div className="mb-4">
+                          <p className="text-xs text-on-surface-variant font-medium">Occupancy: {r.occupants?.length} / {r.capacity}</p>
+                          <div className="w-full bg-surface-container-low h-1.5 rounded-full mt-1 overflow-hidden">
+                             <div className="bg-primary h-full transition-all" style={{ width: `${(r.occupants?.length / r.capacity) * 100}%` }} />
+                          </div>
+                       </div>
+
                        <div className="relative aspect-video bg-surface-container-low rounded-xl overflow-hidden mb-4 group">
                           {r.view360 ? (
-                            <img src={r.view360} className="w-full h-full object-cover" />
+                            <img src={r.view360} className="w-full h-full object-cover" alt={`Room ${r.roomNumber}`} />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center text-outline">
                                <span className="material-symbols-outlined text-4xl mb-2">panorama_photosphere</span>
@@ -670,31 +712,15 @@ const AdminDashboard = () => {
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
-                             <input type="file" className="hidden" id={`room-v360-${i}`} onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (!file) return;
-                                const reader = new FileReader();
-                                reader.onload = async (ev) => {
-                                   try {
-                                      // Simulated upload to memory for demo
-                                      alert('360 Image uploaded to memory! In a real system, this would be saved to the database.');
-                                      // This logic would normally hit an API endpoint to update the room's view360
-                                   } catch { alert('Upload failed'); }
-                                };
-                                reader.readAsDataURL(file);
-                             }} />
-                             <label htmlFor={`room-v360-${i}`} className="cursor-pointer bg-white text-primary px-4 py-2 rounded-lg text-xs font-bold">
+                             <input type="file" className="hidden" id={`room-v360-${r._id}`} />
+                             <label htmlFor={`room-v360-${r._id}`} className="cursor-pointer bg-white text-primary px-4 py-2 rounded-lg text-xs font-bold">
                                 Upload 360° Photo
                              </label>
                           </div>
                        </div>
-
-                       <div className="flex gap-2">
-                          <button className="flex-1 py-2 bg-surface-container text-on-surface rounded-lg text-xs font-bold">Edit Details</button>
-                          <button className="flex-1 py-2 bg-primary text-white rounded-lg text-xs font-bold">Toggle Status</button>
-                       </div>
                     </div>
                   ))}
+                  {rooms.length === 0 && <p className="col-span-full text-center py-20 text-on-surface-variant">No rooms in inventory.</p>}
                 </div>
               </div>
             )}
@@ -795,22 +821,22 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-container-low">
-                        {sampleTransactions.map(t => (
-                          <tr key={t.id} className="hover:bg-surface-container-low/50">
-                            <td className="px-4 py-3 font-mono text-xs text-outline">{t.id}</td>
-                            <td className="px-4 py-3 font-semibold">{t.studentName}</td>
+                        {rooms.filter(r => r.occupants?.length > 0).map((r, i) => (
+                          <tr key={r._id} className="hover:bg-surface-container-low/50">
+                            <td className="px-4 py-3 font-mono text-xs text-outline">TXN-00{i+1}</td>
+                            <td className="px-4 py-3 font-semibold">{r.occupants?.[0]?.fullName || 'Hostel Student'}</td>
                             <td className="px-4 py-3 text-center">
-                              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">{t.room}</span>
+                              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">{r.roomNumber}</span>
                             </td>
-                            <td className="px-4 py-3 font-bold text-slate-800">₹{t.amount.toLocaleString()}</td>
+                            <td className="px-4 py-3 font-bold text-slate-800">₹{r.pricePerMonth?.toLocaleString() || '6,500'}</td>
                             <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 capitalize">{t.type}</span>
+                              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 capitalize">{r.type}</span>
                             </td>
-                            <td className="px-4 py-3 text-on-surface-variant text-xs">{t.date}</td>
+                            <td className="px-4 py-3 text-on-surface-variant text-xs">{new Date(r.updatedAt).toLocaleDateString()}</td>
                             <td className="px-4 py-3">
-                              <Badge label={t.status} colorClass={t.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} />
+                              <Badge label="paid" colorClass="bg-green-100 text-green-700" />
                             </td>
-                            <td className="px-4 py-3 text-xs text-slate-500">{t.method || '—'}</td>
+                            <td className="px-4 py-3 text-xs text-slate-500">Live DB</td>
                           </tr>
                         ))}
                       </tbody>
@@ -831,37 +857,28 @@ const AdminDashboard = () => {
                   <StatCard icon="payments" label="Advance Collected" value={`₹${sampleBookings.reduce((s,b)=>s+b.advancePaid,0).toLocaleString()}`} color="bg-primary-fixed text-primary" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {sampleBookings.map(bk => (
-                    <div key={bk.id} className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/10">
+                  {rooms.filter(r => r.occupants?.length > 0).map(r => (
+                    <div key={r._id} className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/10">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-bold text-on-surface">{bk.studentName}</h4>
-                          <p className="text-xs text-outline mono">{bk.studentId}</p>
+                          <h4 className="font-bold text-on-surface">Occupied Room</h4>
+                          <p className="text-xs text-outline mono">Room {r.roomNumber}</p>
                         </div>
-                        <Badge label={bk.status} colorClass={bk.status === 'active' ? 'bg-green-100 text-green-700' : bk.status === 'upcoming' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'} />
+                        <Badge label="Active" colorClass="bg-green-100 text-green-700" />
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                         <div className="bg-surface-container-low rounded-lg p-2">
-                          <p className="text-outline">Room</p>
-                          <p className="font-bold text-on-surface text-base">{bk.room}</p>
+                          <p className="text-outline">Type</p>
+                          <p className="font-bold text-on-surface text-base uppercase">{r.type}</p>
                         </div>
                         <div className="bg-surface-container-low rounded-lg p-2">
-                          <p className="text-outline">Payment</p>
-                          <Badge label={bk.paymentStatus} colorClass={bk.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : bk.paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} />
+                          <p className="text-outline">Capacity</p>
+                           <p className="font-bold">{r.occupants.length} / {r.capacity}</p>
                         </div>
-                        <div className="bg-surface-container-low rounded-lg p-2">
-                          <p className="text-outline">Check-in</p>
-                          <p className="font-semibold">{bk.checkIn}</p>
-                        </div>
-                        <div className="bg-surface-container-low rounded-lg p-2">
-                          <p className="text-outline">Check-out</p>
-                          <p className="font-semibold">{bk.checkOut}</p>
+                        <div className="bg-surface-container-low rounded-lg p-2 text-center col-span-2 py-3">
+                           <p className="font-black text-emerald-700 text-lg">₹{r.pricePerMonth?.toLocaleString()} / mo</p>
                         </div>
                       </div>
-                      <div className="text-xs text-on-surface-variant">
-                        📞 {bk.phone} · ✉️ {bk.email}
-                      </div>
-                      <div className="mt-2 text-xs font-bold text-emerald-700">Advance Paid: ₹{bk.advancePaid.toLocaleString()}</div>
                     </div>
                   ))}
                 </div>

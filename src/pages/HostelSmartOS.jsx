@@ -844,43 +844,23 @@ const AIPanel = () => {
       } catch {}
     }
 
-    // ── Layer 3: Google Gemini for all other questions ──
+    // ── Layer 3: Unified Backend AI (Gemini + Local Context) ──
     try {
-      const rawKey = import.meta.env.VITE_GEMINI_API_KEY;
-      const geminiKey = rawKey ? rawKey.replace(/['"]/g, '').trim() : '';
-
-      if (!geminiKey) {
-        setChat(prev => [...prev, { role: 'ai', text: '⚠️ Gemini API key not found. Add VITE_GEMINI_API_KEY to your .env file to enable full AI mode.' }]);
-        setThinking(false);
-        return;
-      }
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `You are HostelOS Assistant — a helpful, concise AI assistant embedded in a student hostel management system. Answer the following question clearly and conversationally (under 120 words). If it's a general knowledge question, answer it directly. Question: ${userText}`
-              }]
-            }]
-          })
-        }
-      );
+      const res = await fetch('http://localhost:5000/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userText })
+      });
 
       const data = await res.json();
 
-      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        setChat(prev => [...prev, { role: 'ai', text: data.candidates[0].content.parts[0].text }]);
-      } else if (data.error) {
-        setChat(prev => [...prev, { role: 'ai', text: `❌ Gemini Error: ${data.error.message}` }]);
+      if (data.success && data.answer) {
+        setChat(prev => [...prev, { role: 'ai', text: data.answer }]);
       } else {
-        setChat(prev => [...prev, { role: 'ai', text: '⚠️ No response from AI. Please try again.' }]);
+        setChat(prev => [...prev, { role: 'ai', text: `❌ AI Error: ${data.message || 'Brain disconnected'}` }]);
       }
     } catch (err) {
-      setChat(prev => [...prev, { role: 'ai', text: `❌ Network error: ${err.message}. Check your internet or API key.` }]);
+      setChat(prev => [...prev, { role: 'ai', text: `❌ Network error: ${err.message}. Ensure backend is running.` }]);
     }
 
     setThinking(false);

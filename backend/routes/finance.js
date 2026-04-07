@@ -6,9 +6,7 @@ const Transaction = require('../models/Transaction');
 const User        = require('../models/User');
 const Employee    = require('../models/Employee');
 const Expense     = require('../models/Expense');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const aiService = require('../services/aiService');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SEED DEMO DATA
@@ -317,26 +315,18 @@ router.post('/chat', async (req, res) => {
     let answer, data = null, type = 'text';
 
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = `You are a smart, concise finance assistant for a hostel owner. 
-      
-LIVE MONGODB DATA (current month: ${financeContext.currentMonth}):
-${JSON.stringify(financeContext, null, 2)}
+      const systemPrompt = `- ROLE: You are a dual-expertise agent: (1) Hostel Finance Analyst and (2) Advanced Financial Calculator.
+- CALCULATION CAPABILITY: You MUST perform any math requested (Interest, Profits, Margins, Projections) using standard formulas.
+- INTEREST FORMULAS: 
+  * Simple Interest: (P * R * T) / 100
+  * Compound Interest: P * (1 + r/n)^(nt) - P
+- HOSTEL CONTEXT: Use the provided MONGODB DATA ${JSON.stringify(financeContext)} for any hostel-related queries.
+- FORMATTING: Use bold for numbers, use ₹ symbols, and use clean bullet points.
+- TONE: Professional, analytical, and helpful.
+- ACTIONABLE: Always end with one specific financial advice or observation based on the data.`;
 
-OWNER'S QUESTION: "${query}"
-
-Instructions:
-- Give a clear, actionable answer using ONLY the data above
-- Use ₹ symbols and proper Indian number formatting (lakhs/thousands)
-- Use emojis to make it engaging (💰 ✅ ⚠️ 📊 📈 etc.)
-- If asked for expenses breakdown, list each category
-- If asked for salary details, list each employee's role and salary
-- Keep answer under 200 words
-- End with 1 actionable insight or recommendation
-- Respond in markdown bold for key numbers`;
-
-      const result = await model.generateContent(prompt);
-      answer = result.response.text();
+      const result = await aiService.generateChatResponse(query, financeContext, systemPrompt);
+      answer = result.answer;
 
       // Try to extract table data for specific queries
       const q = query.toLowerCase();

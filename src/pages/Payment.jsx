@@ -280,7 +280,7 @@ const PaymentHub = () => {
                            <p className="text-slate-400 text-sm font-medium italic">"Please do not refresh. Synchronizing payment with the hostel neural ledger."</p>
                         </motion.div>
                      )}
-
+ 
                      {stage === 'success' && (
                         <motion.div key="succ" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10 space-y-8">
                            <div className="w-28 h-28 bg-emerald-500 rounded-full mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20">
@@ -291,13 +291,20 @@ const PaymentHub = () => {
                            <div>
                               <h4 className="text-4xl font-headline font-black text-slate-950 uppercase tracking-tighter leading-none mb-2">Settlement <br /> Efficient</h4>
                               <p className="text-emerald-500 font-bold text-xs uppercase tracking-widest">Transaction Verified: #99201-AL</p>
+                              {location.state?.roomNumber && (
+                                <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Reserved Space</p>
+                                  <p className="text-xl font-headline font-black text-indigo-600">Room {location.state.roomNumber}</p>
+                                  <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase">{location.state.beds}-Bed Allocation</p>
+                                </div>
+                              )}
                            </div>
                            <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100/50 flex items-center justify-center gap-4">
                               <Sparkles className="w-6 h-6 text-amber-500" />
                               <span className="text-sm font-black text-amber-900 uppercase tracking-tighter">Achievement Unlocked: Early Bird +200 Pts</span>
                            </div>
-                           <button onClick={() => setShowCheckout(false)} className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all">
-                              Return to Dashboard
+                           <button onClick={() => navigate('/dashboard')} className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all">
+                               Return to Dashboard
                            </button>
                         </motion.div>
                      )}

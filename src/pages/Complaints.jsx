@@ -2,8 +2,9 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
+import { API_URL } from '../config';
 
-const BACKEND = 'http://127.0.0.1:5000';
+const BACKEND = API_URL;
 const CATEGORIES = ['maintenance', 'food', 'cleanliness', 'security', 'noise', 'other'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const CATEGORY_ICONS = {
@@ -71,12 +72,20 @@ const Complaints = () => {
 
   const fetchMyComplaints = async () => {
     try {
-      const res = await axios.get(`${BACKEND}/api/complaints/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${BACKEND}/api/complaints/my`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      console.log('Fetched complaints:', res.data);
       setMyComplaints(res.data);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to fetch complaints:', err);
+    }
   };
 
-  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.id]: e.target.value }));
+  const handleChange = (e) => {
+    const { id, name, value } = e.target;
+    setForm(prev => ({ ...prev, [id || name]: value }));
+  };
 
   const analyzeImage = async (base64Image) => {
     try {
@@ -94,28 +103,69 @@ const Complaints = () => {
     }
   };
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize if too large (max 1200px)
+          const maxSize = 1200;
+          if (width > maxSize || height > maxSize) {
+            if (width > height) {
+              height = (height / width) * maxSize;
+              width = maxSize;
+            } else {
+              width = (width / height) * maxSize;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress to JPEG with 0.7 quality
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedBase64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const processFiles = useCallback((files) => {
     Array.from(files).forEach(async (file) => {
       if (!file.type.startsWith('image/')) return;
-      if (images.length >= 5) return;
       
-      const reader = new FileReader();
-      reader.onload = async (e) => {
+      try {
+        // Compress image first
+        const compressedSrc = await compressImage(file);
+        
         const imgData = {
-          src: e.target.result,
+          src: compressedSrc,
           name: file.name,
           isAI: false,
           confidence: 0,
           isScanning: true
         };
 
-        setImages(prev => [...prev, imgData].slice(0, 5));
+        setImages(prev => {
+          if (prev.length >= 5) return prev;
+          return [...prev, imgData];
+        });
 
         try {
-          const result = await analyzeImage(e.target.result);
+          const result = await analyzeImage(compressedSrc);
           
           setImages(prevArr => prevArr.map(img => 
-            img.src === e.target.result ? { 
+            img.src === compressedSrc ? { 
               ...img, 
               isScanning: false,
               isAI: result.isAI || false,
@@ -124,13 +174,14 @@ const Complaints = () => {
           ));
         } catch {
           setImages(prevArr => prevArr.map(img => 
-            img.src === e.target.result ? { ...img, isScanning: false } : img
+            img.src === compressedSrc ? { ...img, isScanning: false } : img
           ));
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Image processing failed:', err);
+      }
     });
-  }, [images]);
+  }, []);
 
   const handleFileChange = (e) => processFiles(e.target.files);
   const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); processFiles(e.dataTransfer.files); };
@@ -139,7 +190,11 @@ const Complaints = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!token) { navigate('/'); return; }
+    if (!token) { 
+      setError('Please login to submit a complaint');
+      navigate('/'); 
+      return; 
+    }
     
     // Check if any AI images used
     if (images.some(img => img.isAI)) {
@@ -147,22 +202,33 @@ const Complaints = () => {
       return;
     }
 
-    setLoading(true); setError('');
+    setLoading(true); 
+    setError('');
+    
+    console.log('Submitting complaint:', { ...form, imageCount: images.length });
+    
     try {
-      await axios.post(`${BACKEND}/api/complaints`, {
+      const response = await axios.post(`${BACKEND}/api/complaints`, {
         ...form,
         studentName: user.fullName || 'Unknown',
         studentEmail: user.email || '',
         images: images.map(img => img.src),
       }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      console.log('Complaint submitted successfully:', response.data);
+      
       setSuccess(true);
       setForm({ title: '', description: '', roomNumber: '', category: 'maintenance', priority: 'medium' });
       setImages([]);
       fetchMyComplaints();
       setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit complaint');
-    } finally { setLoading(false); }
+      console.error('Complaint submission error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to submit complaint';
+      setError(errorMsg);
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   return (
@@ -187,7 +253,14 @@ const Complaints = () => {
 
         <div className="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/10 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <div className="bg-error/10 text-error p-3 rounded-lg text-sm font-medium">{error}</div>}
+            {error && (
+              <div className="bg-error/10 text-error p-4 rounded-lg text-sm font-medium border border-error/20">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
 
             {/* Category Selection */}
             <div>

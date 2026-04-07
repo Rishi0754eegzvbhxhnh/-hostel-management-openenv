@@ -33,7 +33,10 @@ router.get('/stats', auth, adminOnly, async (req, res) => {
 // GET /api/admin/students — all students
 router.get('/students', auth, adminOnly, async (req, res) => {
   try {
-    const students = await User.find({ role: 'student' }).select('-password').sort({ createdAt: -1 });
+    const students = await User.find({ role: 'student' })
+      .select('-password')
+      .populate('room', 'roomNumber type')
+      .sort({ createdAt: -1 });
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

@@ -11,7 +11,7 @@ function initializeClient() {
   if (!accountSid || !authToken || 
       accountSid === 'your_twilio_sid_here' || 
       authToken === 'your_twilio_auth_token_here') {
-    console.warn('⚠️  Twilio WhatsApp not configured');
+    // Silently skip if not configured
     return false;
   }
   

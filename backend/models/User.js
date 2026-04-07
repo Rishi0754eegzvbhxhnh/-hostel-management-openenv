@@ -72,14 +72,15 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  if (this.password && this.password.startsWith('$2')) return; // already hashed
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  if (this.password && this.password.startsWith('$2')) return next(); // already hashed
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+    next();
   } catch (error) {
-    throw error;
+    next(error);
   }
 });
 

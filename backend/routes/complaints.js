@@ -20,10 +20,30 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
+const imageService = require('../services/imageService');
+
 // POST /api/complaints — student submits complaint with optional base64 images
 router.post('/', auth, async (req, res) => {
   try {
     const { category, title, description, roomNumber, priority, images } = req.body;
+    
+    let aiStatus = 'uncertain';
+    let aiConfidence = 0;
+
+    // Analyze first image for authenticity if available (optional, won't block submission)
+    if (images && images.length > 0) {
+      try {
+        const result = await imageService.detectAiImage(images[0]);
+        if (result.success) {
+          aiStatus = result.isAI ? 'ai_detected' : 'authentic';
+          aiConfidence = result.confidence;
+        }
+      } catch (imageError) {
+        console.log('Image analysis skipped:', imageError.message);
+        // Continue without image analysis
+      }
+    }
+
     const complaint = new Complaint({
       student: req.user.id,
       studentName: req.body.studentName || 'Unknown Student',
@@ -34,12 +54,25 @@ router.post('/', auth, async (req, res) => {
       description,
       priority: priority || 'medium',
       images: images || [],
+      aiStatus,
+      aiConfidence,
     });
+    
     await complaint.save();
-    res.status(201).json({ message: 'Complaint submitted successfully', complaint });
+    console.log('✅ Complaint saved:', complaint._id);
+    
+    res.status(201).json({ 
+      success: true,
+      message: 'Complaint submitted successfully', 
+      complaint 
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('❌ Complaint submission error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: err.message 
+    });
   }
 });
 

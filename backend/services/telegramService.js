@@ -10,7 +10,7 @@ let bot = null;
  */
 function initializeBot() {
   if (!token || token === 'your_telegram_bot_token_here') {
-    console.warn('⚠️  Telegram Bot not configured');
+    // Silently skip if not configured
     return false;
   }
 

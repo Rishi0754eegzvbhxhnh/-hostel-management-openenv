@@ -23,6 +23,12 @@ const complaintSchema = new mongoose.Schema({
     enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium',
   },
+  aiStatus: {
+    type: String,
+    enum: ['authentic', 'ai_detected', 'uncertain'],
+    default: 'uncertain',
+  },
+  aiConfidence: { type: Number, default: 0 },
   adminResponse: { type: String, default: '' },
   resolvedAt: { type: Date },
 }, { timestamps: true });
