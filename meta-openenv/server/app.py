@@ -86,6 +86,11 @@ async def list_tasks():
 
 
 # ── Dev entrypoint ─────────────────────────────────────────────────────────────
+def main():
+    """Main entry point for starting the environment server."""
+    port = int(os.getenv("PORT", 7860))
+    uvicorn.run("server.app:app", host="0.0.0.0", port=port, reload=False)
+
+
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    main()
