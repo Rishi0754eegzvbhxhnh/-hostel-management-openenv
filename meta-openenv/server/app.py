@@ -45,7 +45,7 @@ async def favicon():
 
 
 class ResetRequest(BaseModel):
-    task_name: str
+    task_name: Optional[str] = "room-allocation"
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -56,10 +56,11 @@ async def health():
 
 
 @app.post("/reset", response_model=HostelObservation)
-async def reset(request: ResetRequest):
-    """Initialize a new episode for the given task."""
+async def reset(request: Optional[ResetRequest] = None):
+    """Initialize a new episode. Defaults to room-allocation if body is empty."""
     try:
-        obs = env.reset(request.task_name)
+        task = request.task_name if request else "room-allocation"
+        obs = env.reset(task)
         return obs
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
