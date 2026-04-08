@@ -21,7 +21,7 @@ from models import HostelAction
 
 # ── Environment Variables (Matching Submission Checklist) ──────────────────────
 # Note: HF_TOKEN must not have a default to pass the automated check.
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
 MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME", "hostel-openenv-img")
@@ -133,7 +133,7 @@ class LLMAgent:
 
 # ── Main Evaluation Loop ──────────────────────────────────────────────────────
 
-def run_evaluation(env_base_url: str = "http://localhost:8000"):
+def run_evaluation(env_base_url: str = "http://localhost:7860"):
     """
     Standard OpenEnv inference loop.
     Connects to the HostelEnv server, runs all 6 tasks, and reports results.

@@ -21,7 +21,7 @@ class HostelEnvClient:
             print(result.reward)
     """
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:7860"):
         self.base_url = base_url.rstrip("/")
         self._session = requests.Session()
 
