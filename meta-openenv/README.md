@@ -11,7 +11,14 @@ pinned: false
 # 🏘️ HostelEnv — Smart Hostel Ecosystem Benchmark
 **Official Submission for Meta OpenEnv Hackathon 2026**
 
-HostelEnv is a comprehensive Agentic Reinforcement Learning environment designed to simulate real-world hostel management challenges. It evaluates an AI agent's ability to act as a "Digital Warden," managing everything from safety-critical IoT alerts to complex financial scheduling.
+### 🌐 Overview
+HostelEnv is a high-fidelity **Agentic Reinforcement Learning** environment designed to bridge the gap between LLM reasoning and real-world operations. It simulates the high-stakes role of a **"Digital Warden"**—an AI ecosystem capable of managing multi-stakeholder needs, processing financial logistics, and responding to safety-critical IoT events in real-time.
+
+### 🚀 Why HostelEnv?
+- **Complex Decision Making**: Moves beyond simple RAG to active environment manipulation.
+- **Safety Critical**: Evaluates agent behavior in emergency scenarios (Fire/IoT Safety).
+- **Multi-Modal Logic**: Handles both structured financial data and natural language student/parent queries.
+- **OpenEnv Compliant**: Built on the latest Meta OpenEnv standards for scalable evaluation.
 
 ---
 

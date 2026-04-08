@@ -149,14 +149,14 @@ class HostelEnv:
         if self.is_done:
             return HostelStepResult(
                 observation=self.current_observation.get("observation", {}),
-                reward=0.0,
+                reward=0.1,
                 done=True,
                 info={"error": "Episode already completed. Call reset()."}
             )
         if self.current_task is None:
             return HostelStepResult(
                 observation={},
-                reward=0.0,
+                reward=0.1,
                 done=True,
                 info={"error": "No task loaded. Call reset(task_name) first."}
             )

@@ -92,8 +92,8 @@ def grade_task(task_name: str, action: Any, internal_state: Dict[str, Any]) -> T
     if task_name == "room-allocation":
         room = action.strip() if isinstance(action, str) else str(action)
         if room in internal_state.get("available_rooms", []):
-            return 1.0, {"success": True, "room": room}
-        return 0.0, {"success": False, "error": "Invalid room selection or room full"}
+            return 0.9, {"success": True, "room": room}
+        return 0.1, {"success": False, "error": "Invalid room selection or room full"}
 
     elif task_name == "fee-meal-scheduling":
         # expects a dict: {"fee_status": "paid", "meal_plan": "Veg"}
@@ -102,15 +102,15 @@ def grade_task(task_name: str, action: Any, internal_state: Dict[str, Any]) -> T
         
         # Simple check for required keys
         if "fee_status" in action and "meal_plan" in action:
-            return 1.0, {"success": True, "data": action}
-        return 0.0, {"error": "Missing required keys: fee_status or meal_plan"}
+            return 0.9, {"success": True, "data": action}
+        return 0.1, {"error": "Missing required keys: fee_status or meal_plan"}
 
     elif task_name == "complaint-resolution":
         if not isinstance(action, dict):
             return 0.0, {"error": "JSON dict expected"}
         if action.get("category") and action.get("priority"):
-            return 1.0, {"success": True}
-        return 0.0, {"error": "Missing category or priority"}
+            return 0.9, {"success": True}
+        return 0.1, {"error": "Missing category or priority"}
 
     elif task_name == "parking-guidance":
         """
@@ -130,11 +130,11 @@ def grade_task(task_name: str, action: Any, internal_state: Dict[str, Any]) -> T
         guidance = action.get("guidance", "")
         
         if slot in available_slots and f"near {expected_block}" in guidance:
-            return 1.0, {"success": True, "optimal": True}
+            return 0.95, {"success": True, "optimal": True}
         elif slot in available_slots:
             return 0.5, {"success": True, "optimal": False, "note": "Valid slot but suboptimal guidance"}
         else:
-            return -0.5, {"success": False, "error": "Invalid or taken slot"}
+            return 0.1, {"success": False, "error": "Invalid or taken slot"}
 
     elif task_name == "iot-maintenance":
         action_text = action.lower() if isinstance(action, str) else str(action).lower()
@@ -142,13 +142,20 @@ def grade_task(task_name: str, action: Any, internal_state: Dict[str, Any]) -> T
         
         if sensor == "Smoke":
             if "suppression" in action_text or "fire department" in action_text:
-                return 1.2, {"success": True, "status": "Emergency Handled"}
-            return -1.5, {"success": False, "error": "SAFETY CRITICAL FAILURE"}
+                return 0.95, {"success": True, "status": "Emergency Handled"}
+            return 0.05, {"success": False, "error": "SAFETY CRITICAL FAILURE"}
         
         elif sensor == "Water Leak":
             if "plumbing" in action_text or "maintenance" in action_text:
                 return 0.8, {"success": True, "status": "Maintenance Notified"}
-            return -0.5, {"success": False, "error": "Maintenance Ignored"}
+            return 0.2, {"success": False, "error": "Maintenance Ignored"}
+
+        elif sensor == "Temperature":
+            if "hvac" in action_text or "cooling" in action_text:
+                return 0.85, {"success": True, "status": "HVAC Adjusted"}
+            return 0.3, {"success": False, "error": "Temperature Ignored"}
+            
+        return 0.4, {"success": True, "note": "Action received for unknown sensor"}
 
     elif task_name == "parent-query":
         """
@@ -166,13 +173,13 @@ def grade_task(task_name: str, action: Any, internal_state: Dict[str, Any]) -> T
         action_request = action.get("request_type")
         
         if action_student == expected_student and action_request == expected_request:
-            return 1.0, {"success": True, "status": "Correct parent report generated"}
+            return 0.95, {"success": True, "status": "Correct parent report generated"}
         elif action_student == expected_student or action_request == expected_request:
             return 0.5, {"success": True, "status": "Partial info match"}
         else:
-            return -1.0, {"success": False, "error": "Irrelevant or wrong info provided to parent"}
+            return 0.1, {"success": False, "error": "Irrelevant or wrong info provided to parent"}
 
-    return 0.0, {"error": "Unknown task"}
+    return 0.1, {"error": "Unknown task"}
 
 
 

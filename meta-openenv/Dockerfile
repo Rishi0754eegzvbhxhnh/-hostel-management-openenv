@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all environment files with correct ownership
 COPY --chown=user . .
 
+# Install the project to make entry points (like 'server') available
+RUN pip install --no-cache-dir -e .
+
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=$HOME/app

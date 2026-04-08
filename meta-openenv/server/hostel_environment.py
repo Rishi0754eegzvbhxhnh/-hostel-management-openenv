@@ -75,7 +75,7 @@ class HostelEnvironment:
                     observation={},
                     task_name=self._current_task or "none",
                 ),
-                reward=0.0,
+                reward=0.1,
                 done=True,
                 info={"error": "Episode already done. Call reset()."},
             )
