@@ -50,6 +50,8 @@ const Dashboard = () => {
     { name: 'Complaints System', icon: 'support_agent', link: '/complaints', desc: 'Lodge physical maintenance issues' },
     { name: 'Smart Security', icon: 'security', link: '/security', desc: 'Digital QR-based gate pass' },
     { name: 'Immersive AR Tour', icon: 'view_in_ar', link: '/ar-tour', desc: 'Explore the campus virtually' },
+    { name: 'Holiday Planner', icon: 'travel_explore', link: '/holiday-planner', desc: 'AI trip plans for 6 Indian cities' },
+    { name: 'Smart Parking', icon: 'local_parking', link: '/parking', desc: 'Live parking slot availability' },
     { name: 'Global News Hub', icon: 'public', link: '#', action: () => { window.scrollTo(0, 1500); }, desc: 'Check latest global updates' }
   ];
 

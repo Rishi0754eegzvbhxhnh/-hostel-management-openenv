@@ -21,6 +21,7 @@ const adminOnly = (req, res, next) => {
 };
 
 const imageService = require('../services/imageService');
+const hf           = require('../services/huggingFaceService');
 
 // POST /api/complaints — student submits complaint with optional base64 images
 router.post('/', auth, async (req, res) => {
@@ -30,7 +31,7 @@ router.post('/', auth, async (req, res) => {
     let aiStatus = 'uncertain';
     let aiConfidence = 0;
 
-    // Analyze first image for authenticity if available (optional, won't block submission)
+    // Analyze first image for authenticity if available
     if (images && images.length > 0) {
       try {
         const result = await imageService.detectAiImage(images[0]);
@@ -40,8 +41,22 @@ router.post('/', auth, async (req, res) => {
         }
       } catch (imageError) {
         console.log('Image analysis skipped:', imageError.message);
-        // Continue without image analysis
       }
+    }
+
+    // ── Hugging Face AI: auto-classify complaint priority & category ──────
+    let hfResult = { priority: priority || 'medium', category: category || 'other', model: 'rule-based' };
+    try {
+      const textToClassify = `${title || ''} ${description || ''}`.trim();
+      if (textToClassify.length > 5) {
+        const classified  = await hf.classifyComplaint(textToClassify);
+        hfResult.priority = classified.priority || hfResult.priority;
+        hfResult.category = classified.category || hfResult.category;
+        hfResult.model    = classified.model || 'rule-based';
+        console.log(`🤗 HF classified: priority=${hfResult.priority}, category=${hfResult.category} [${hfResult.model}]`);
+      }
+    } catch (hfErr) {
+      console.warn('HF classification skipped:', hfErr.message);
     }
 
     const complaint = new Complaint({
@@ -49,13 +64,16 @@ router.post('/', auth, async (req, res) => {
       studentName: req.body.studentName || 'Unknown Student',
       studentEmail: req.body.studentEmail || '',
       roomNumber,
-      category,
+      category:    hfResult.category,            // AI-detected category
       title,
       description,
-      priority: priority || 'medium',
+      priority:    priority || hfResult.priority, // AI-detected priority (user can override)
       images: images || [],
       aiStatus,
       aiConfidence,
+      hfPriority:  hfResult.priority,
+      hfCategory:  hfResult.category,
+      hfModel:     hfResult.model,
     });
     
     await complaint.save();
@@ -64,7 +82,12 @@ router.post('/', auth, async (req, res) => {
     res.status(201).json({ 
       success: true,
       message: 'Complaint submitted successfully', 
-      complaint 
+      complaint,
+      aiClassification: {
+        priority: hfResult.priority,
+        category: hfResult.category,
+        model: hfResult.model,
+      },
     });
   } catch (err) {
     console.error('❌ Complaint submission error:', err);
@@ -102,7 +125,7 @@ router.patch('/:id', auth, adminOnly, async (req, res) => {
     const { status, adminResponse, priority } = req.body;
     const update = { status, adminResponse, priority };
     if (status === 'resolved') update.resolvedAt = new Date();
-    const complaint = await Complaint.findByIdAndUpdate(req.params.id, update, { new: true });
+    const complaint = await Complaint.findByIdAndUpdate(req.params.id, update, { returnDocument: 'after' });
     res.json(complaint);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

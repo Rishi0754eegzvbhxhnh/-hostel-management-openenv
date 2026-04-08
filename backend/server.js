@@ -42,6 +42,14 @@ const imageAnalysisRoutes = require('./routes/imageAnalysis');
 const hostelDiscoveryRoutes = require('./routes/hostelDiscovery');
 
 const notificationRoutes = require('./routes/notifications');
+const forecastRoutes     = require('./routes/forecast');
+const sampleRoutes       = require('./routes/sample');
+const parkingRoutes      = require('./routes/parking');
+const tourismRoutes      = require('./routes/tourism');
+const parentsRoutes      = require('./routes/parents');
+const securityRoutes     = require('./routes/security');
+const studyPodsRoutes    = require('./routes/studypods');
+const eventsRoutes       = require('./routes/events');
 
 
 app.use((req, res, next) => {
@@ -64,6 +72,14 @@ app.use('/api/image-analysis', imageAnalysisRoutes);
 app.use('/api/discovery', hostelDiscoveryRoutes);
 
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/forecast',      forecastRoutes);
+app.use('/api/sample',        sampleRoutes);
+app.use('/api/parking',       parkingRoutes);
+app.use('/api/tourism',       tourismRoutes);
+app.use('/api/parents',       parentsRoutes);
+app.use('/api/security',      securityRoutes);
+app.use('/api/studypods',     studyPodsRoutes);
+app.use('/api/events',        eventsRoutes);
 
 
 
@@ -83,13 +99,6 @@ const MONGO_URI = process.env.MONGO_URI;
 
 app.listen(PORT, () => {
   console.log(`📡 Backend Server alive @ http://localhost:${PORT}`);
-  
-  // Initialize messaging bots
-  const telegramService = require('./services/telegramService');
-  const whatsappService = require('./services/whatsappService');
-  
-  telegramService.initializeBot();
-  whatsappService.initializeClient();
   
   mongoose.connect(MONGO_URI)
     .then(async () => {

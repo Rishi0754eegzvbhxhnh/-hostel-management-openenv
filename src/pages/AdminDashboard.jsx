@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import FinanceChatbot from '../components/FinanceChatbot';
 import AdminIoTPanel from '../components/AdminIoTPanel';
+import ForecastPanel from '../components/ForecastPanel';
 
 const BACKEND = 'http://localhost:5000';
 const CATEGORY_COLORS = {
@@ -119,7 +120,34 @@ const AdminDashboard = () => {
     } finally { setLoading(false); }
   };
 
+  const [menuRandomizing, setMenuRandomizing] = useState(false);
+  const randomizeMenu = async () => {
+    setMenuRandomizing(true);
+    try {
+      const res = await axios.post(`${BACKEND}/api/sample/menu/randomize`, {}, { headers });
+      if (res.data.success) {
+        const today = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
+        const todayMenu = res.data.data?.[today];
+        const preview = todayMenu
+          ? `Today (${today}): 🍳 ${todayMenu.breakfast?.items?.slice(0,1).join(', ')} · 🍛 ${todayMenu.lunch?.items?.slice(0,1).join(', ')} · 🍽️ ${todayMenu.dinner?.items?.slice(0,1).join(', ')}`
+          : 'Full 7-day menu updated!';
+        setToast({ type: 'success', msg: '🎲 Menu Randomized!', detail: preview });
+        setTimeout(() => setToast(null), 5000);
+      }
+    } catch (err) {
+      setToast({ type: 'error', msg: 'Randomize Failed', detail: err.message });
+    } finally { setMenuRandomizing(false); }
+  };
+
   const updateComplaintStatus = async (id, status) => {
+    // Debug mode: update state locally (fake IDs aren't valid MongoDB ObjectIds)
+    if (token === 'DEBUG_TOKEN') {
+      setComplaints(prev => prev.map(c => c._id === id ? { ...c, status, adminResponse } : c));
+      setSelectedComplaint(null);
+      setToast({ type: 'success', msg: 'Status Updated (Demo)', detail: `Complaint marked as ${status}` });
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
     try {
       await axios.patch(`${BACKEND}/api/complaints/${id}`, { status, adminResponse }, { headers });
       fetchAll();
@@ -280,10 +308,15 @@ const AdminDashboard = () => {
     { id: 'digital-twin', label: 'Digital Twin', icon: 'view_in_ar' },
     { id: 'students', label: 'Students', icon: 'groups' },
     { id: 'payments', label: 'Payments', icon: 'payments' },
+    { id: 'parking', label: '🅿️ Parking', icon: 'local_parking' },
+    { id: 'studypods', label: '📚 Study Pods', icon: 'school' },
+    { id: 'laundry', label: '🧺 Laundry', icon: 'local_laundry_service' },
+    { id: 'security', label: '🔒 Security', icon: 'security' },
     { id: 'iot', label: '💡 IoT Control', icon: 'lightbulb' },
     { id: 'transactions', label: 'Transactions', icon: 'receipt_long' },
     { id: 'bookings', label: 'Bookings', icon: 'event_available' },
     { id: 'pending-fees', label: 'Pending Fees', icon: 'pending_actions', badge: pendingFees.filter(p => p.daysOverdue > 0).length },
+    { id: 'forecast', label: '📈 Forecast', icon: 'trending_up' },
     { id: 'finance-ai', label: '🤖 Finance AI', icon: 'smart_toy' },
   ];
 
@@ -352,8 +385,22 @@ const AdminDashboard = () => {
             {/* OVERVIEW TAB */}
             {activeTab === 'overview' && (
               <div>
-                <h2 className="font-headline text-3xl font-extrabold text-primary mb-2">Dashboard Overview</h2>
-                <p className="text-on-surface-variant mb-8">Welcome back, {user.fullName} 👋</p>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="font-headline text-3xl font-extrabold text-primary mb-1">Dashboard Overview</h2>
+                    <p className="text-on-surface-variant">Welcome back, {user.fullName} 👋</p>
+                  </div>
+                  <button
+                    onClick={randomizeMenu}
+                    disabled={menuRandomizing}
+                    className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-sm px-5 py-3 rounded-2xl shadow-lg shadow-orange-200 transition-all disabled:opacity-60"
+                  >
+                    {menuRandomizing
+                      ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Updating…</>
+                      : <>🎲 Randomize Menu</>
+                    }
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
                   <StatCard icon="groups" label="Total Students" value={stats.totalStudents} color="bg-primary-fixed text-primary" />
@@ -1010,6 +1057,12 @@ const AdminDashboard = () => {
                 <FinanceChatbot />
               </div>
             )}
+
+            {/* FORECAST TAB */}
+            {activeTab === 'forecast' && (
+              <ForecastPanel token={token} />
+            )}
+
           </>
         )}
       </main>

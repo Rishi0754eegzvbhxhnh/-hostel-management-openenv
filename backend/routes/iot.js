@@ -36,7 +36,7 @@ const seedDevices = async () => {
       await IoTDevice.findOneAndUpdate(
         { deviceId: d.deviceId },
         { $setOnInsert: d },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     }
     console.log('✅ IoT Devices seeded');
@@ -73,7 +73,8 @@ setInterval(async () => {
       }
     }
     // Simulate energy usage for ON devices (0.5 kWh per hour = ~0.008 per minute)
-    await IoTDevice.updateMany({ status: true }, { $inc: { energyUsed: 0.008 } });
+    // Use native collection to bypass Mongoose middleware chain (avoids 'next is not a function')
+    await IoTDevice.collection.updateMany({ status: true }, { $inc: { energyUsed: 0.008 } });
   } catch (e) {
     console.error('Automation engine error:', e.message);
   }
@@ -156,7 +157,7 @@ router.patch('/control/:deviceId', async (req, res) => {
     const device = await IoTDevice.findOneAndUpdate(
       { deviceId: req.params.deviceId },
       { $set: updates },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!device) return res.status(404).json({ success: false, message: 'Device not found' });
 

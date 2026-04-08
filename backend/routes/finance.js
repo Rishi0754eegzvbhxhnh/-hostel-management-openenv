@@ -34,8 +34,8 @@ const seedFinanceData = async () => {
               const ref = `TXN-${Date.now()}-${Math.random().toString(36).substr(2,6).toUpperCase()}`;
               await Transaction.findOneAndUpdate(
                 { referenceNo: ref },
-                { $setOnInsert: { student: s._id, title: titles[type], amount: amounts[type], paymentType: type, status, room: rooms[i % rooms.length], studentName: s.fullName, referenceNo: ref, createdAt: date, updatedAt: date } },
-                { upsert: true }
+                { $setOnInsert: { student: s._id, title: titles[type], amount: amounts[type], paymentType: type, status, room: rooms[i % rooms.length], studentName: s.fullName, referenceNo: ref } },
+                { upsert: true, returnDocument: 'after', timestamps: false }
               );
             }
           }

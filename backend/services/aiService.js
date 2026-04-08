@@ -1,23 +1,28 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const axios = require('axios');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const XAI_API_KEY = process.env.XAI_API_KEY;
-const AI_PROVIDER = process.env.AI_PROVIDER || 'gemini';
+const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+let openaiClient = null;
+
+function getOpenAIClient() {
+  if (!openaiClient && OPENAI_API_KEY) {
+    openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
 
 /**
- * Summarize news articles using Gemini AI
+ * Summarize news articles using OpenAI
  */
 async function summarizeNews(articles, format = 'bullet') {
   try {
-    if (!GEMINI_API_KEY) {
+    if (!OPENAI_API_KEY) {
       return generateSimpleSummary(articles, format);
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
     const newsText = articles
       .slice(0, 5)
       .map((a, i) => `${i + 1}. ${a.title}\n   ${a.description || 'No description'}`)
@@ -27,16 +32,24 @@ async function summarizeNews(articles, format = 'bullet') {
       ? `Summarize these news headlines in 5 concise bullet points:\n\n${newsText}`
       : `Provide a brief paragraph summarizing these news headlines:\n\n${newsText}`;
 
-    const result = await model.generateContent(`System: You are a helpful news summarization assistant.\n\nUser: ${prompt}`);
-    const response = await result.response;
-    
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are a helpful news summarization assistant.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    });
+
     return {
       success: true,
-      summary: response.text(),
+      summary: response.choices[0].message.content,
       articlesCount: articles.length
     };
   } catch (error) {
-    console.error('Gemini API Error:', error.message);
+    console.error('OpenAI API Error:', error.message);
     return generateSimpleSummary(articles, format);
   }
 }
@@ -45,28 +58,52 @@ async function summarizeNews(articles, format = 'bullet') {
  * AI Provider Switchboard with Fallback
  */
 async function generateChatResponse(query, context = {}, systemPrompt = '') {
-  // Try xAI first if configured
+  // Try OpenAI first if configured
+  if (AI_PROVIDER === 'openai' && OPENAI_API_KEY) {
+    try {
+      return await generateOpenAIResponse(query, context, systemPrompt);
+    } catch (error) {
+      console.error('OpenAI failed, falling back:', error.message);
+    }
+  }
+  
+  // Try xAI if configured
   if (AI_PROVIDER === 'xai' && XAI_API_KEY) {
     try {
       return await generateXAIResponse(query, context, systemPrompt);
     } catch (error) {
-      console.error('xAI failed, falling back to Gemini:', error.message);
-      // Fall through to Gemini
-    }
-  }
-  
-  // Try Gemini if configured
-  if (GEMINI_API_KEY) {
-    try {
-      return await generateGeminiResponse(query, context, systemPrompt);
-    } catch (error) {
-      console.error('Gemini failed, using rule-based fallback:', error.message);
-      // Fall through to rule-based
+      console.error('xAI failed, falling back:', error.message);
     }
   }
   
   // Rule-based fallback
   return generateRuleBasedResponse(query, context);
+}
+
+/**
+ * OpenAI Implementation
+ */
+async function generateOpenAIResponse(query, context, systemPrompt) {
+  if (!OPENAI_API_KEY) throw new Error('OpenAI API Key missing');
+
+  const client = getOpenAIClient();
+  
+  const fullPrompt = `${systemPrompt}\n\nCONTEXT DATA:\n${JSON.stringify(context, null, 2)}\n\nUSER QUERY: "${query}"`;
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: fullPrompt },
+      { role: 'user', content: query }
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
+  });
+
+  return {
+    success: true,
+    answer: response.choices[0].message.content
+  };
 }
 
 /**
@@ -94,23 +131,6 @@ async function generateXAIResponse(query, context, systemPrompt) {
   return {
     success: true,
     answer: response.data.choices[0].message.content
-  };
-}
-
-/**
- * Gemini Implementation
- */
-async function generateGeminiResponse(query, context, systemPrompt) {
-  if (!GEMINI_API_KEY) throw new Error('Gemini API Key missing');
-
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  const fullPrompt = `System: ${systemPrompt}\n\nCONTEXT DATA:\n${JSON.stringify(context, null, 2)}\n\nUSER QUERY: "${query}"`;
-  
-  const result = await model.generateContent(fullPrompt);
-  const response = await result.response;
-  return {
-    success: true,
-    answer: response.text()
   };
 }
 
@@ -211,26 +231,44 @@ function generateRuleBasedResponse(query, context) {
     };
   }
   
-  // Who are you queries
-  if (lowerQuery.includes('who are you') || lowerQuery.includes('what are you') || lowerQuery.includes('your name')) {
+  // Greetings
+  if (lowerQuery.match(/^(hi|hello|hey|hii|helo|howdy|sup|yo)[\s!.?]*$/)) {
     return {
       success: true,
-      answer: "I'm Aria, your intelligent hostel AI assistant! I can help you with room bookings, food menus, laundry status, complaints, events, and more. Just ask me anything!"
+      answer: "👋 Hello! I'm Aria, your hostel AI assistant. Ask me about room availability, today's food menu, laundry, complaints, events, or payments!"
     };
   }
-  
-  // Help queries
-  if (lowerQuery.includes('help') || lowerQuery.includes('what can you do')) {
+
+  // Short/one-word acknowledgements
+  if (lowerQuery.match(/^(ok|okay|thanks|thank you|cool|great|nice|good)[\s!.?]*$/)) {
     return {
       success: true,
-      answer: "I can help you with:\n• Room availability and booking\n• Today's food menu\n• Laundry machine status\n• Filing complaints\n• Event information\n• Payment queries\n• Energy usage stats\n\nJust ask me anything about hostel life!"
+      answer: "😊 Happy to help! Let me know if you have any other questions about hostel life."
     };
   }
-  
-  // Default response
+
+  // Math / calculation queries — safely evaluate arithmetic expressions
+  const mathMatch = query.match(/^[\d\s\+\-\*\/\.\(\)%^]+$/);
+  if (mathMatch || lowerQuery.includes('calculate') || lowerQuery.includes('what is') || lowerQuery.includes('compute')) {
+    const expr = query.replace(/[^0-9+\-*/().% ]/g, '').trim();
+    if (expr) {
+      try {
+        // eslint-disable-next-line no-new-func
+        const result = Function(`"use strict"; return (${expr})`)();
+        if (!isNaN(result)) {
+          return {
+            success: true,
+            answer: `🧮 **${expr} = ${result}**\n\nI can also help with hostel finance — try asking about "pending dues" or "monthly collection"!`
+          };
+        }
+      } catch (_) { /* fall through */ }
+    }
+  }
+
+  // Default response — more informative
   return {
     success: true,
-    answer: "I'm here to help! You can ask me about room availability, food menu, laundry status, complaints, events, or payments. What would you like to know?"
+    answer: "I'm here to help! You can ask me about:\n• 🏠 Room availability\n• 🍛 Today's food menu\n• 👕 Laundry status\n• ⚠️ Complaints\n• 📅 Events\n• 💰 Payments\n\nOr ask me to calculate something (e.g. _\"2+2\"_ or _\"100*12\"_)!"
   };
 }
 

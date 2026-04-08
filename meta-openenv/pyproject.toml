@@ -1,0 +1,37 @@
+[project]
+name = "hostel-openenv"
+version = "0.1.0"
+description = "A Meta OpenEnv benchmark for hostel management agent evaluation."
+authors = [
+    { name = "Rishi Kumar", email = "kumarrishi2589@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.24.0",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.openenv]
+# Official openenv CLI manifest fields
+environment = "server.hostel_environment:HostelEnvironment"
+action = "models:HostelAction"
+observation = "models:HostelObservation"
+state = "models:HostelState"
+server = "server.app:app"
+tasks = [
+    "room-allocation",
+    "complaint-resolution",
+    "fee-meal-scheduling",
+    "parking-guidance",
+    "iot-maintenance",
+    "parent-query",
+]
+version = "v1"

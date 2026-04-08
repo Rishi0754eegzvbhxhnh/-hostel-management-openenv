@@ -56,7 +56,7 @@ router.get('/maintenance', auth, adminOnly, async (req, res) => {
 // PATCH /api/admin/maintenance/:id
 router.patch('/maintenance/:id', auth, adminOnly, async (req, res) => {
   try {
-    const item = await Maintenance.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const item = await Maintenance.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     res.json(item);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

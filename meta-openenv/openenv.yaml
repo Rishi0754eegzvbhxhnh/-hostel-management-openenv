@@ -1,0 +1,48 @@
+# openenv.yaml — Official OpenEnv Environment Manifest
+# This file is required by the openenv CLI for push/deploy to Hugging Face Spaces.
+
+name: hostel-openenv
+version: "0.1.0"
+description: >
+  A 6-task agentic RL benchmark for hostel management.
+  Covers room allocation, complaint resolution, fee scheduling,
+  parking guidance, IoT safety, and parent queries.
+
+# Server configuration
+server:
+  module: server.app
+  app: app
+  host: "0.0.0.0"
+  port: 8000
+
+# Entry points for openenv CLI validation
+environment:
+  class: server.hostel_environment:HostelEnvironment
+  action: models:HostelAction
+  observation: models:HostelObservation
+  state: models:HostelState
+
+# Tasks
+tasks:
+  - room-allocation
+  - complaint-resolution
+  - fee-meal-scheduling
+  - parking-guidance
+  - iot-maintenance
+  - parent-query
+
+# Docker
+docker:
+  dockerfile: Dockerfile
+  context: .
+
+# Metadata for HF Hub
+metadata:
+  author: Rishi Kumar
+  tags:
+    - reinforcement-learning
+    - hostel-management
+    - multi-stakeholder
+    - iot
+    - openenv
+    - india-ai-hackathon

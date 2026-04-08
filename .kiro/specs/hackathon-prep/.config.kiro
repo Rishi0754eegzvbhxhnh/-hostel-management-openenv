@@ -1,0 +1,18 @@
+{
+  "specName": "hackathon-prep",
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "createdAt": "2026-04-08T10:00:00Z",
+  "status": "in-progress",
+  "priority": "P0",
+  "description": "Comprehensive spec to prepare Smart Hostel Management System for hackathon demo",
+  "phases": [
+    "Phase 1: Backend Route Creation",
+    "Phase 2: Frontend Wiring",
+    "Phase 3: Admin Dashboard Navigation",
+    "Phase 4: Testing & Submission"
+  ],
+  "estimatedHours": 7,
+  "owner": "Rishi",
+  "tags": ["hackathon", "backend", "frontend", "admin", "parent-portal"]
+}

@@ -59,17 +59,35 @@ const StudyPods = () => {
   const [selectedPod, setSelectedPod] = useState(null);
 
   useEffect(() => {
-    // Simulated pods fetch
-    setTimeout(() => {
-      setPods([
-        { id: 1, podName: 'The Nexus', block: 'A', capacity: 4, isAvailable: true, amenities: ['Smart Board', 'Coffee Access'] },
-        { id: 2, podName: 'Deep Focus', block: 'B', capacity: 2, isAvailable: true, amenities: ['Acoustic Foam', 'Soft Lighting'] },
-        { id: 3, podName: 'Orbit Hub', block: 'C', capacity: 8, isAvailable: false, amenities: ['Dual Monitors', 'Whiteboard'] },
-        { id: 4, podName: 'Quiet Shell', block: 'A', capacity: 1, isAvailable: true, amenities: ['Noise Cancellation', 'Ergo Chair'] },
-        { id: 5, podName: 'Collab Zone', block: 'D', capacity: 6, isAvailable: true, amenities: ['VR Ready', 'Projector'] }
-      ]);
-      setLoading(false);
-    }, 1200);
+    const fetchPods = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/studypods`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setPods(response.data.pods.map(pod => ({
+            ...pod,
+            isAvailable: pod.availableSeats > 0
+          })));
+        }
+      } catch (error) {
+        console.error('Failed to fetch study pods:', error);
+        // Fallback to demo data
+        setPods([
+          { _id: 1, podName: 'The Nexus', block: 'A', capacity: 4, isAvailable: true, amenities: ['Smart Board', 'Coffee Access'] },
+          { _id: 2, podName: 'Deep Focus', block: 'B', capacity: 2, isAvailable: true, amenities: ['Acoustic Foam', 'Soft Lighting'] },
+          { _id: 3, podName: 'Orbit Hub', block: 'C', capacity: 8, isAvailable: false, amenities: ['Dual Monitors', 'Whiteboard'] },
+          { _id: 4, podName: 'Quiet Shell', block: 'A', capacity: 1, isAvailable: true, amenities: ['Noise Cancellation', 'Ergo Chair'] },
+          { _id: 5, podName: 'Collab Zone', block: 'D', capacity: 6, isAvailable: true, amenities: ['VR Ready', 'Projector'] }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPods();
   }, []);
 
   return (
@@ -168,7 +186,7 @@ const StudyPods = () => {
             ) : (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {pods.map(p => (
-                     <PodCard key={p.id} pod={p} onBook={(pod) => setSelectedPod(pod)} />
+                     <PodCard key={p._id || p.id} pod={p} onBook={(pod) => setSelectedPod(pod)} />
                   ))}
                </div>
             )}

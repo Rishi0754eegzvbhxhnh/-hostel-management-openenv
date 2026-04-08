@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import Webcam from 'react-webcam';
 import { Shield, Lock, Unlock, QrCode, Scan, ShieldAlert, History, Activity, Zap, CheckCircle2, UserCheck, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,12 +38,43 @@ const DigitalSecurity = () => {
   const [scanning, setScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState(null); // 'success', 'warning', 'error'
   const webcamRef = useRef(null);
+  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState({ totalEntries: 0, totalExits: 0, flagged: 0, blocked: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const [logs, setLogs] = useState([
-    { name: 'Aditya Raj', type: 'Main Entrance Entry', time: '10:42 AM', status: 'authorized' },
-    { name: 'Unknown Target', type: 'Unlicensed Access Try', time: '09:12 AM', status: 'unauthorized' },
-    { name: 'Sameer Khan', type: 'Block B Exit', time: '08:50 AM', status: 'authorized' }
-  ]);
+  useEffect(() => {
+    const fetchSecurityData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/security`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setLogs(response.data.logs.slice(0, 3).map(log => ({
+            name: log.user?.fullName || 'Unknown',
+            type: `${log.type.charAt(0).toUpperCase() + log.type.slice(1)} - ${log.method}`,
+            time: new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            status: log.status
+          })));
+          setStats(response.data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch security data:', error);
+        // Fallback to demo data
+        setLogs([
+          { name: 'Aditya Raj', type: 'Entry - Face Recognition', time: '10:42 AM', status: 'authorized' },
+          { name: 'Unknown Target', type: 'Entry - QR Code', time: '09:12 AM', status: 'flagged' },
+          { name: 'Sameer Khan', type: 'Exit - QR Code', time: '08:50 AM', status: 'authorized' }
+        ]);
+        setStats({ totalEntries: 482, totalExits: 450, flagged: 12, blocked: 2 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSecurityData();
+  }, []);
 
   const handleScan = () => {
     setScanning(true);
@@ -84,8 +116,8 @@ const DigitalSecurity = () => {
             <div className="lg:col-span-8 flex flex-col gap-8">
                
                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <SecurityMetric icon={History} label="Active Users" value="482" color="bg-indigo-50 text-indigo-600" />
-                  <SecurityMetric icon={ShieldAlert} label="Alerts Flagged" value="12" color="bg-rose-50 text-rose-600" />
+                  <SecurityMetric icon={History} label="Active Users" value={stats.totalEntries} color="bg-indigo-50 text-indigo-600" />
+                  <SecurityMetric icon={ShieldAlert} label="Alerts Flagged" value={stats.flagged} color="bg-rose-50 text-rose-600" />
                   <SecurityMetric icon={Zap} label="Neural Pulse" value="Live" color="bg-emerald-50 text-emerald-600" />
                </div>
 

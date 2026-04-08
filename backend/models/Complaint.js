@@ -31,6 +31,10 @@ const complaintSchema = new mongoose.Schema({
   aiConfidence: { type: Number, default: 0 },
   adminResponse: { type: String, default: '' },
   resolvedAt: { type: Date },
+  // ── Hugging Face AI Classification ──────────────────────────────────────
+  hfPriority: { type: String, default: null }, // AI-suggested priority
+  hfCategory:  { type: String, default: null }, // AI-detected category
+  hfModel:     { type: String, default: null }, // Model used (or 'rule-based')
 }, { timestamps: true });
 
 module.exports = mongoose.model('Complaint', complaintSchema);

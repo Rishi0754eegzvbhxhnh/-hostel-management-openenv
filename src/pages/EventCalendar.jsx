@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Calendar as CalendarIcon, MapPin, Users, Heart, Camera, Radio, Globe, Zap, ArrowRight, ShieldCheck, Sparkles, Plus, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from '../components/Calendar'; // Reuse existing calendar core
@@ -33,12 +34,67 @@ const EventCard = ({ title, category, time, location, attendees, icon: Icon, col
 
 const EventCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredEvents = [
-    { title: 'Neural Hackathon 2.0', category: 'Tech', time: '10:00 AM', location: 'Block A Rooftop', attendees: 124, icon: Zap, color: 'bg-indigo-500' },
-    { title: 'Sunset Yoga Yoga', category: 'Wellness', time: '05:30 PM', location: 'Garden Area', attendees: 45, icon: Heart, color: 'bg-rose-500' },
-    { title: 'Acoustic Night', category: 'Entertainment', time: '08:00 PM', location: 'Hostel Mess', attendees: 89, icon: Radio, color: 'bg-amber-500' },
-  ];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/events`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.success) {
+          setEvents(response.data.events);
+        }
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+        // Fallback to demo data
+        setEvents([
+          { title: 'Neural Hackathon 2.0', category: 'Tech', startTime: '10:00', location: 'Block A Rooftop', attendees: 124, icon: Zap, color: 'bg-indigo-500' },
+          { title: 'Sunset Yoga', category: 'Wellness', startTime: '17:30', location: 'Garden Area', attendees: 45, icon: Heart, color: 'bg-rose-500' },
+          { title: 'Acoustic Night', category: 'Entertainment', startTime: '20:00', location: 'Hostel Mess', attendees: 89, icon: Radio, color: 'bg-amber-500' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  const getCategoryIcon = (category) => {
+    const icons = {
+      cultural: Heart,
+      sports: Zap,
+      academic: Globe,
+      social: Radio,
+      workshop: Camera
+    };
+    return icons[category] || Radio;
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      cultural: 'bg-rose-500',
+      sports: 'bg-indigo-500',
+      academic: 'bg-blue-500',
+      social: 'bg-amber-500',
+      workshop: 'bg-green-500'
+    };
+    return colors[category] || 'bg-slate-500';
+  };
+
+  const featuredEvents = events.slice(0, 3).map(e => ({
+    title: e.title,
+    category: e.category,
+    time: e.startTime,
+    location: e.location,
+    attendees: e.attendees?.length || 0,
+    icon: getCategoryIcon(e.category),
+    color: getCategoryColor(e.category)
+  }));
 
   return (
     <div className="min-h-screen bg-[#FDFEFF] font-body text-slate-900 pb-20 pt-20">
