@@ -39,11 +39,9 @@ HostelEnv is built on the **Meta OpenEnv** standard:
 
 ### Local Validation
 ```bash
-# Start the environment
-uvicorn server.app:app --port 8000 --host 0.0.0.0
-
-# Run the agent evaluation
-python inference.py
+Usage:
+  1. Start the server:  server
+  2. Run inference:      python inference.py
 ```
 
 ### Docker Deployment

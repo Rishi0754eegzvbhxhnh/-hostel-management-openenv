@@ -6,6 +6,7 @@ Exposes /reset, /step, /state endpoints.
 Optionally: WebSocket support and /web UI (via ENABLE_WEB_INTERFACE=true).
 """
 import os
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel

@@ -4,7 +4,7 @@ inference.py — OpenEnv Inference Script for HostelEnv
 Runs an LLM agent against all 6 hostel management tasks.
 
 Usage:
-  1. Start the server:  uvicorn server.app:app --port 8000
+  1. Start the server:  server
   2. Run inference:      python inference.py
 
 Environment Variables:

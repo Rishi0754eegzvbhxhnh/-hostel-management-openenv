@@ -30,5 +30,5 @@ ENV PYTHONPATH=$HOME/app
 # HuggingFace Spaces uses port 7860
 EXPOSE 7860
 
-# Start the FastAPI server
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Start the environment server via the project entry point (Multi-Mode Deployment)
+CMD ["server"]
