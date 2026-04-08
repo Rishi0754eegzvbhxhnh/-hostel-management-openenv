@@ -1,57 +1,72 @@
-# Hostel OpenEnv Environment
+---
+title: Hostel OpenEnv
+emoji: 🏘️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
-> 📐 Full system architecture → [`ARCHITECTURE.md`](../ARCHITECTURE.md)
+# 🏘️ HostelEnv — Smart Hostel Ecosystem Benchmark
+**Official Submission for Meta OpenEnv Hackathon 2026**
 
-A Meta OpenEnv-compliant benchmark environment for evaluating LLM agents on **hostel management** tasks. Built following the official OpenEnv spec (FastAPI + WebSocket server, typed Pydantic models, Docker isolation).
+HostelEnv is a comprehensive Agentic Reinforcement Learning environment designed to simulate real-world hostel management challenges. It evaluates an AI agent's ability to act as a "Digital Warden," managing everything from safety-critical IoT alerts to complex financial scheduling.
 
-## Task Suite (6 Tasks)
-| # | Task | Difficulty | Domain |
-|---|---|---|---|
-| 1 | `room-allocation` | Easy | Room Management |
-| 2 | `complaint-resolution` | Medium | Student Services |
-| 3 | `fee-meal-scheduling` | Hard | Finance |
-| 4 | `parking-guidance` | Hard | Infrastructure |
-| 5 | `iot-maintenance` | Insane | Safety & IoT |
-| 6 | `parent-query` | Hard | Multi-Stakeholder |
+---
 
-## Quick Start
+## 🎯 Benchmark Tasks
+The environment features 6 distinct tasks with increasing complexity:
 
-### Local (no Docker)
+1. **Room Allocation (Easy)**: assigning students based on preferences and priority.
+2. **Complaint Resolution (Medium)**: Categorizing and prioritizing maintenance issues.
+3. **Fee & Meal Scheduling (Hard)**: Processing financial transactions and dietary logistics.
+4. **Parking Guidance (Hard)**: Spatial reasoning for vehicle assignment near student blocks.
+5. **IoT Maintenance (Insane)**: Handling safety alerts (Smoke/Fire) vs. maintenance (Leaks).
+6. **Parent Query (Hard)**: Generating structured reports for external stakeholders.
+
+---
+
+## 🏗️ System Architecture
+HostelEnv is built on the **Meta OpenEnv** standard:
+- **Server**: FastAPI-based HTTP backend exposing `/reset` and `/step`.
+- **Environment**: Stateful logic with integrated grading and reward functions.
+- **Agent**: LLM-driven inference loop (supports Llama-3.1 via HF Inference API).
+
+---
+
+## 🚀 Getting Started
+
+### Local Validation
 ```bash
-pip install -r server/requirements.txt
+# Start the environment
+uvicorn server.app:app --port 8000 --host 0.0.0.0
+
+# Run the agent evaluation
 python inference.py
 ```
 
-### With Docker
+### Docker Deployment
 ```bash
 docker build -t hostel-openenv .
-docker run -p 8000:8000 hostel-openenv
+docker run -p 7860:7860 hostel-openenv
 ```
 
-### As OpenEnv Client
-```python
-from client import HostelAction, HostelEnvClient
+---
 
-with HostelEnvClient(base_url="http://localhost:8000").sync() as env:
-    obs = env.reset(task_name="room-allocation")
-    result = env.step(HostelAction(action="B201"))
-    print(result.reward)  # 1.0
-```
+## 🛠️ Configuration
+- **API_BASE_URL**: URL of the running environment.
+- **MODEL_NAME**: LLM model identifier (default: `meta-llama/Llama-3.1-8B-Instruct`).
+- **HF_TOKEN**: Your Hugging Face API token (required for LLM inference).
 
-## Deploy to Hugging Face
-```bash
-pip install openenv-core
-openenv push --repo-id your-username/hostel-openenv
-```
+---
 
-## Example Output
-```
-[START] env=hostel-openenv model=gpt-4.1-mini seed=42
-[STEP] step=1 task=room-allocation reward=1.00 done=true
-[STEP] step=2 task=complaint-resolution reward=1.00 done=true
-[STEP] step=3 task=fee-meal-scheduling reward=1.00 done=true
-[STEP] step=4 task=parking-guidance reward=1.00 done=true
-[STEP] step=5 task=iot-maintenance reward=1.20 done=true
-[STEP] step=6 task=parent-query reward=1.00 done=true
-[END] success=true tasks_run=6 total_rewards=6.20
-```
+## ✅ Submission Checklist
+- [x] Official OpenEnv `inference.py` structure followed.
+- [x] Dockerized for isolated execution (Port 7860).
+- [x] Robust grading logic with randomized observations.
+- [x] Support for both structured JSON and plain-string actions.
+
+---
+**Author**: Rishi Kumar  
+**Project**: Smart Hostel Management System
